@@ -9,7 +9,8 @@ from .const import (
     DEFAULT_MAX_POWER, 
     DEFAULT_STEP_SIZE, 
     DEFAULT_ALPHA,
-    DEFAULT_BOOST_THRESHOLD  # Import the new constant
+    DEFAULT_BOOST_THRESHOLD,
+    DEFAULT_EMPTY_THRESHOLD
 )
 
 class InverterCoordinator(DataUpdateCoordinator):
@@ -59,35 +60,42 @@ class InverterCoordinator(DataUpdateCoordinator):
         if self.solar_ema is None: self.solar_ema = solar_raw
         else: self.solar_ema = (alpha * solar_raw) + ((1 - alpha) * self.solar_ema)
 
-        # Configurable Boost Logic
+        # 1. Update Boost State
         boost_threshold = self.get_cfg("boost_threshold", DEFAULT_BOOST_THRESHOLD)
         if not self.hard_boost and soc >= boost_threshold: 
             self.hard_boost = True
-        elif self.hard_boost and soc <= (boost_threshold - 1): # 1% hysteresis
+        elif self.hard_boost and soc <= (boost_threshold - 2):
             self.hard_boost = False
 
         state_desc, desired = "Balanced", current
         step = self.get_cfg("step_size", DEFAULT_STEP_SIZE)
+        empty_threshold = self.get_cfg("empty_threshold", DEFAULT_EMPTY_THRESHOLD)
         
-        if self.hard_boost: desired, state_desc = desired + step, "Boosting (High SoC)"
-        elif grid_p > 10: desired, state_desc = desired + step, "Importing (Increase)"
-        elif grid_p < -60: desired, state_desc = desired - step, "Exporting (Decrease)"
+        # 2. Main Logic
+        # If there is no sun (<10W) AND the battery is below the empty threshold -> Go to Standby
+        if solar_raw < 10 and soc < empty_threshold:
+            desired = self.get_cfg("min_power", DEFAULT_MIN_POWER)
+            state_desc = f"Standby (Empty Battery)"
+        elif self.hard_boost: 
+            desired, state_desc = desired + step, "Boosting (High SoC)"
+        elif grid_p > 10: 
+            desired, state_desc = desired + step, "Importing (Increase)"
+        elif grid_p < -60: 
+            desired, state_desc = desired - step, "Exporting (Decrease)"
 
-        guard = solar_raw < 100
-        if guard: desired, state_desc = 100, "Guard Active (Low Sun)"
-        
+        # 3. Final Constraints
         target = max(self.get_cfg("min_power", DEFAULT_MIN_POWER), min(self.get_cfg("max_power", DEFAULT_MAX_POWER), desired))
 
         if self.enabled and target != current:
             await self.hass.services.async_call(limit_id.split(".")[0], "set_value", {"entity_id": limit_id, "value": target})
 
-        self.data = {
-            "target_power": target,
+        self.data.update({
+            "target_power": target, 
             "solar_ema": round(self.solar_ema, 1),
             "house_load": round(house_load, 1),
             "solar_yield": round(yield_ratio, 1),
-            "logic_state": state_desc,
-            "hard_boost": self.hard_boost,
-            "guard_active": guard,
-        }
+            "logic_state": state_desc, 
+            "hard_boost": self.hard_boost, 
+            "guard_active": False 
+        })
         self.async_set_updated_data(self.data)
