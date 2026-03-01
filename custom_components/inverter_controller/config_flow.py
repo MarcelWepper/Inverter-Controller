@@ -4,7 +4,14 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers import selector
-from .const import DOMAIN, DEFAULT_MIN_POWER, DEFAULT_MAX_POWER, DEFAULT_STEP_SIZE, DEFAULT_ALPHA
+from .const import (
+    DOMAIN, 
+    DEFAULT_MIN_POWER, 
+    DEFAULT_MAX_POWER, 
+    DEFAULT_STEP_SIZE, 
+    DEFAULT_ALPHA,
+    DEFAULT_BOOST_THRESHOLD  # Import the new constant
+)
 
 def get_full_schema(defaults: dict | None = None) -> vol.Schema:
     """Centralized schema used for initial setup and reconfiguration."""
@@ -18,6 +25,8 @@ def get_full_schema(defaults: dict | None = None) -> vol.Schema:
         vol.Optional("max_power", default=defaults.get("max_power", DEFAULT_MAX_POWER)): int,
         vol.Optional("step_size", default=defaults.get("step_size", DEFAULT_STEP_SIZE)): int,
         vol.Optional("solar_ema_alpha", default=defaults.get("solar_ema_alpha", DEFAULT_ALPHA)): selector.NumberSelector(selector.NumberSelectorConfig(min=0.01, max=1.0, step=0.01, mode="box")),
+        # Added boost threshold selector
+        vol.Optional("boost_threshold", default=defaults.get("boost_threshold", DEFAULT_BOOST_THRESHOLD)): selector.NumberSelector(selector.NumberSelectorConfig(min=1, max=100, step=1, unit_of_measurement="%", mode="box")),
     })
 
 class InverterControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -36,7 +45,7 @@ class InverterControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="user", data_schema=get_full_schema())
 
 class InverterControllerOptionsFlowHandler(config_entries.OptionsFlow):
-    """Handle editing variables. self.config_entry is handled by Home Assistant."""
+    """Handle editing variables."""
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:

@@ -2,7 +2,15 @@
 from __future__ import annotations
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.event import async_track_state_change_event
-from .const import DOMAIN, LOGGER, DEFAULT_MIN_POWER, DEFAULT_MAX_POWER, DEFAULT_STEP_SIZE, DEFAULT_ALPHA
+from .const import (
+    DOMAIN, 
+    LOGGER, 
+    DEFAULT_MIN_POWER, 
+    DEFAULT_MAX_POWER, 
+    DEFAULT_STEP_SIZE, 
+    DEFAULT_ALPHA,
+    DEFAULT_BOOST_THRESHOLD  # Import the new constant
+)
 
 class InverterCoordinator(DataUpdateCoordinator):
     """Processes grid/solar data and stores state for sensors."""
@@ -24,7 +32,6 @@ class InverterCoordinator(DataUpdateCoordinator):
             "guard_active": False,
         }
 
-        # Fixed cleanup registration
         self.config_entry.async_on_unload(
             async_track_state_change_event(
                 hass, 
@@ -45,18 +52,19 @@ class InverterCoordinator(DataUpdateCoordinator):
             current = float(self.hass.states.get(limit_id).state or 100)
         except (ValueError, AttributeError, TypeError): return
 
-        # Statistics
         alpha = self.get_cfg("solar_ema_alpha", DEFAULT_ALPHA)
         house_load = current + grid_p
         yield_ratio = (current / solar_raw * 100) if solar_raw > 0 else 0
 
-        # EMA
         if self.solar_ema is None: self.solar_ema = solar_raw
         else: self.solar_ema = (alpha * solar_raw) + ((1 - alpha) * self.solar_ema)
 
-        # Logic
-        if not self.hard_boost and soc >= 96: self.hard_boost = True
-        elif self.hard_boost and soc <= 94: self.hard_boost = False
+        # Configurable Boost Logic
+        boost_threshold = self.get_cfg("boost_threshold", DEFAULT_BOOST_THRESHOLD)
+        if not self.hard_boost and soc >= boost_threshold: 
+            self.hard_boost = True
+        elif self.hard_boost and soc <= (boost_threshold - 1): # 1% hysteresis
+            self.hard_boost = False
 
         state_desc, desired = "Balanced", current
         step = self.get_cfg("step_size", DEFAULT_STEP_SIZE)
