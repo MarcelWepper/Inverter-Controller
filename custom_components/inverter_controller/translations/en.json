@@ -2,23 +2,20 @@
   "config": {
     "step": {
       "user": {
-        "title": "Required Entities",
-        "description": "Select the sensors needed for the logic.",
+        "title": "Inverter Controller Settings",
         "data": {
-          "grid_sensor": "Grid Power Sensor",
-          "soc_sensor": "Battery SoC Sensor",
-          "solar_sensor": "Solar Production Sensor",
-          "inverter_limit_entity": "Inverter Limit Control"
-        }
-      },
-      "settings": {
-        "title": "Logic Variables",
-        "description": "Fine-tune the balancing behavior.",
-        "data": {
-          "min_power": "Min Power (W)",
-          "max_power": "Max Power (W)",
-          "step_size": "Step Size (W)",
-          "solar_ema_alpha": "EMA Alpha (0.1 slow - 0.9 fast)"
+          "grid_sensor": "Grid Power Sensor (W)",
+          "soc_sensor": "Battery SoC Sensor (%)",
+          "solar_sensor": "Solar Power Sensor (W)",
+          "inverter_limit_entity": "Inverter Limit Entity",
+          "min_power": "Minimum Power (W)",
+          "max_power": "Maximum Power (W)",
+          "step_size": "Adjustment Step Size",
+          "import_threshold": "Import Threshold (W) - Start Increasing",
+          "export_threshold": "Export Threshold (W) - Start Decreasing",
+          "solar_ema_alpha": "Solar Smoothing Alpha (0-1)",
+          "boost_threshold": "Battery Boost Threshold (%)",
+          "empty_threshold": "Empty Battery Standby Threshold (%)"
         }
       }
     }
@@ -26,16 +23,20 @@
   "options": {
     "step": {
       "init": {
-        "title": "Edit Inverter Settings",
+        "title": "Adjust Controller Settings",
         "data": {
-          "grid_sensor": "Grid Power Sensor",
-          "soc_sensor": "Battery SoC Sensor",
-          "solar_sensor": "Solar Production Sensor",
-          "inverter_limit_entity": "Inverter Limit Control",
-          "min_power": "Min Power (W)",
-          "max_power": "Max Power (W)",
-          "step_size": "Step Size (W)",
-          "solar_ema_alpha": "EMA Alpha"
+          "grid_sensor": "Grid Power Sensor (W)",
+          "soc_sensor": "Battery SoC Sensor (%)",
+          "solar_sensor": "Solar Power Sensor (W)",
+          "inverter_limit_entity": "Inverter Limit Entity",
+          "min_power": "Minimum Power (W)",
+          "max_power": "Maximum Power (W)",
+          "step_size": "Adjustment Step Size",
+          "import_threshold": "Import Threshold (W) - Start Increasing",
+          "export_threshold": "Export Threshold (W) - Start Decreasing",
+          "solar_ema_alpha": "Solar Smoothing Alpha (0-1)",
+          "boost_threshold": "Battery Boost Threshold (%)",
+          "empty_threshold": "Empty Battery Standby Threshold (%)"
         }
       }
     }

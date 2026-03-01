@@ -10,7 +10,9 @@ from .const import (
     DEFAULT_STEP_SIZE, 
     DEFAULT_ALPHA,
     DEFAULT_BOOST_THRESHOLD,
-    DEFAULT_EMPTY_THRESHOLD
+    DEFAULT_EMPTY_THRESHOLD,
+    DEFAULT_IMPORT_THRESHOLD,
+    DEFAULT_EXPORT_THRESHOLD
 )
 
 class InverterCoordinator(DataUpdateCoordinator):
@@ -60,7 +62,6 @@ class InverterCoordinator(DataUpdateCoordinator):
         if self.solar_ema is None: self.solar_ema = solar_raw
         else: self.solar_ema = (alpha * solar_raw) + ((1 - alpha) * self.solar_ema)
 
-        # 1. Update Boost State
         boost_threshold = self.get_cfg("boost_threshold", DEFAULT_BOOST_THRESHOLD)
         if not self.hard_boost and soc >= boost_threshold: 
             self.hard_boost = True
@@ -71,19 +72,22 @@ class InverterCoordinator(DataUpdateCoordinator):
         step = self.get_cfg("step_size", DEFAULT_STEP_SIZE)
         empty_threshold = self.get_cfg("empty_threshold", DEFAULT_EMPTY_THRESHOLD)
         
-        # 2. Main Logic
-        # If there is no sun (<10W) AND the battery is below the empty threshold -> Go to Standby
+        # Fetch the user-defined deadbands
+        import_threshold = self.get_cfg("import_threshold", DEFAULT_IMPORT_THRESHOLD)
+        export_threshold = self.get_cfg("export_threshold", DEFAULT_EXPORT_THRESHOLD)
+        
+        # Logic Loop
         if solar_raw < 10 and soc < empty_threshold:
             desired = self.get_cfg("min_power", DEFAULT_MIN_POWER)
             state_desc = f"Standby (Empty Battery)"
         elif self.hard_boost: 
             desired, state_desc = desired + step, "Boosting (High SoC)"
-        elif grid_p > 10: 
+        elif grid_p > import_threshold: 
             desired, state_desc = desired + step, "Importing (Increase)"
-        elif grid_p < -60: 
+        elif grid_p < -export_threshold: 
             desired, state_desc = desired - step, "Exporting (Decrease)"
 
-        # 3. Final Constraints
+        # Constraints
         target = max(self.get_cfg("min_power", DEFAULT_MIN_POWER), min(self.get_cfg("max_power", DEFAULT_MAX_POWER), desired))
 
         if self.enabled and target != current:
