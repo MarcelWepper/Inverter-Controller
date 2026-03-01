@@ -15,9 +15,10 @@ A reactive, event-driven power balancing integration for Home Assistant. It dyna
 ## 🚀 Key Features
 
 * **Reactive Power Balancing**: Unlike timer-based scripts, this integration listens for state changes and adjusts power limits instantly as your house load shifts.
+* **Configurable Deadband**: Fine-tune your import and export thresholds (e.g., 10W import, 20W export) to tightly hug your home's actual consumption without getting stuck.
 * **Exponential Moving Average (EMA)**: Built-in smoothing for solar production data to prevent "flapping" during cloudy days.
-* **Safety Guard**: Automatically forces the inverter to a safe minimum (100W) if solar production drops below a critical threshold.
-* **High SoC Hard Boost**: Intelligent hysteresis logic that ramps up inverter output when the battery is nearly full (e.g., >96%) to prevent energy waste.
+* **Empty Battery Standby**: Automatically parks the inverter at your safe minimum limit (e.g., 100W) when the sun is down and the battery drops below your configured threshold (e.g., 10%). This guarantees a smooth start the next morning.
+* **Configurable High SoC Boost**: Intelligent hysteresis logic that safely ramps up inverter output when the battery hits your customizable threshold (e.g., >95%) to prevent energy waste when the battery is full.
 * **Advanced Statistics**: Provides calculated insights including **Estimated House Load**, **Solar Yield Ratio**, and a **Logic State** indicator.
 * **Master Switch**: Includes a dashboard toggle to instantly enable or disable the controller logic.
 
@@ -52,7 +53,11 @@ You must provide these four entities to start the logic:
 * **Inverter Limit Control**: The `number` or `input_number` entity that sets the inverter's maximum output.
 
 ### Step 2: Adjustable Parameters
-After selecting entities, you can fine-tune the behavior:
+After selecting entities, you can fine-tune the behavior dynamically via the Integration Options menu:
 * **Min/Max Power**: The absolute bounds for the inverter (e.g., 100W - 800W).
 * **Step Size**: How many Watts to adjust by in each cycle (e.g., 50W).
-* **EMA Alpha**: The smoothing factor for solar averaging. `0.1` is very smooth/slow, `0.9` is very reactive/jump
+* **Import Threshold**: Grid import target before the controller steps up the power (e.g., 10W).
+* **Export Threshold**: Grid export target before the controller steps down the power (e.g., 20W).
+* **EMA Alpha**: The smoothing factor for solar averaging. `0.1` is very smooth/slow, `0.9` is very reactive/jumpy.
+* **Boost Threshold**: Battery percentage to trigger the Hard Boost export mode (e.g., 95%).
+* **Empty Threshold**: Battery percentage to trigger nighttime standby mode (e.g., 10%).
