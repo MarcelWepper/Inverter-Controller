@@ -72,25 +72,30 @@ class InverterCoordinator(DataUpdateCoordinator):
         state_desc, desired = "Balanced", current
         step = self.get_cfg("step_size", DEFAULT_STEP_SIZE)
         empty_threshold = self.get_cfg("empty_threshold", DEFAULT_EMPTY_THRESHOLD)
-        
         import_threshold = self.get_cfg("import_threshold", DEFAULT_IMPORT_THRESHOLD)
         export_threshold = self.get_cfg("export_threshold", DEFAULT_EXPORT_THRESHOLD)
         solar_margin = self.get_cfg("solar_margin", DEFAULT_SOLAR_MARGIN)
         
-        # Logic Loop
+        # 1. Base Logic: What does the house need right now?
+        if grid_p > import_threshold: 
+            desired, state_desc = current + step, "Importing (Increase)"
+        elif grid_p < -export_threshold: 
+            desired, state_desc = current - step, "Exporting (Decrease)"
+
+        # 2. Overrides (Standby & Boost Mode)
         if solar_raw < 10 and soc < empty_threshold:
             desired = self.get_cfg("min_power", DEFAULT_MIN_POWER)
-            state_desc = f"Standby (Empty Battery)"
-        elif self.hard_boost: 
-            # Directly track incoming solar power minus the safety margin
-            desired = max(0, solar_raw - solar_margin) 
-            state_desc = f"Boosting (Solar Passthrough: {int(desired)}W)"
-        elif grid_p > import_threshold: 
-            desired, state_desc = desired + step, "Importing (Increase)"
-        elif grid_p < -export_threshold: 
-            desired, state_desc = desired - step, "Exporting (Decrease)"
+            state_desc = "Standby (Empty Battery)"
+        elif self.hard_boost:
+            passthrough = max(0, solar_raw - solar_margin)
+            # Elegantly take the maximum of what the house needs OR the passthrough
+            if passthrough > desired:
+                desired = passthrough
+                state_desc = f"Boosting (Passthrough: {int(passthrough)}W)"
+            else:
+                state_desc = "Boosting (Covering Load)"
 
-        # Constraints
+        # 3. Final Constraints (Ensures it stays between min_power and max_power)
         target = max(self.get_cfg("min_power", DEFAULT_MIN_POWER), min(self.get_cfg("max_power", DEFAULT_MAX_POWER), desired))
 
         if self.enabled and target != current:
