@@ -12,7 +12,8 @@ from .const import (
     DEFAULT_BOOST_THRESHOLD,
     DEFAULT_EMPTY_THRESHOLD,
     DEFAULT_IMPORT_THRESHOLD,
-    DEFAULT_EXPORT_THRESHOLD
+    DEFAULT_EXPORT_THRESHOLD,
+    DEFAULT_SOLAR_MARGIN
 )
 
 class InverterCoordinator(DataUpdateCoordinator):
@@ -72,25 +73,24 @@ class InverterCoordinator(DataUpdateCoordinator):
         step = self.get_cfg("step_size", DEFAULT_STEP_SIZE)
         empty_threshold = self.get_cfg("empty_threshold", DEFAULT_EMPTY_THRESHOLD)
         
-        # Fetch the user-defined deadbands
         import_threshold = self.get_cfg("import_threshold", DEFAULT_IMPORT_THRESHOLD)
         export_threshold = self.get_cfg("export_threshold", DEFAULT_EXPORT_THRESHOLD)
+        solar_margin = self.get_cfg("solar_margin", DEFAULT_SOLAR_MARGIN)
         
         # Logic Loop
         if solar_raw < 10 and soc < empty_threshold:
             desired = self.get_cfg("min_power", DEFAULT_MIN_POWER)
             state_desc = f"Standby (Empty Battery)"
         elif self.hard_boost: 
-            # Directly track incoming solar power (Solar Passthrough)
-            desired = solar_raw 
-            state_desc = f"Boosting (Solar Passthrough: {int(solar_raw)}W)"
+            # Directly track incoming solar power minus the safety margin
+            desired = max(0, solar_raw - solar_margin) 
+            state_desc = f"Boosting (Solar Passthrough: {int(desired)}W)"
         elif grid_p > import_threshold: 
             desired, state_desc = desired + step, "Importing (Increase)"
         elif grid_p < -export_threshold: 
             desired, state_desc = desired - step, "Exporting (Decrease)"
 
         # Constraints
-        # This line automatically limits it to your configured max_power (e.g., 800) and min_power
         target = max(self.get_cfg("min_power", DEFAULT_MIN_POWER), min(self.get_cfg("max_power", DEFAULT_MAX_POWER), desired))
 
         if self.enabled and target != current:

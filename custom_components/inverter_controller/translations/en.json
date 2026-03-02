@@ -13,6 +13,7 @@
           "step_size": "Adjustment Step Size",
           "import_threshold": "Import Threshold (W) - Start Increasing",
           "export_threshold": "Export Threshold (W) - Start Decreasing",
+          "solar_margin": "Solar Passthrough Margin (W)",
           "solar_ema_alpha": "Solar Smoothing Alpha (0-1)",
           "boost_threshold": "Battery Boost Threshold (%)",
           "empty_threshold": "Empty Battery Standby Threshold (%)"
@@ -34,6 +35,7 @@
           "step_size": "Adjustment Step Size",
           "import_threshold": "Import Threshold (W) - Start Increasing",
           "export_threshold": "Export Threshold (W) - Start Decreasing",
+          "solar_margin": "Solar Passthrough Margin (W)",
           "solar_ema_alpha": "Solar Smoothing Alpha (0-1)",
           "boost_threshold": "Battery Boost Threshold (%)",
           "empty_threshold": "Empty Battery Standby Threshold (%)"

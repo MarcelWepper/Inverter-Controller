@@ -13,7 +13,8 @@ from .const import (
     DEFAULT_BOOST_THRESHOLD,
     DEFAULT_EMPTY_THRESHOLD,
     DEFAULT_IMPORT_THRESHOLD,
-    DEFAULT_EXPORT_THRESHOLD
+    DEFAULT_EXPORT_THRESHOLD,
+    DEFAULT_SOLAR_MARGIN
 )
 
 def get_full_schema(defaults: dict | None = None) -> vol.Schema:
@@ -28,6 +29,7 @@ def get_full_schema(defaults: dict | None = None) -> vol.Schema:
         vol.Optional("step_size", default=defaults.get("step_size", DEFAULT_STEP_SIZE)): int,
         vol.Optional("import_threshold", default=defaults.get("import_threshold", DEFAULT_IMPORT_THRESHOLD)): selector.NumberSelector(selector.NumberSelectorConfig(min=0, max=500, step=1, unit_of_measurement="W", mode="box")),
         vol.Optional("export_threshold", default=defaults.get("export_threshold", DEFAULT_EXPORT_THRESHOLD)): selector.NumberSelector(selector.NumberSelectorConfig(min=0, max=500, step=1, unit_of_measurement="W", mode="box")),
+        vol.Optional("solar_margin", default=defaults.get("solar_margin", DEFAULT_SOLAR_MARGIN)): selector.NumberSelector(selector.NumberSelectorConfig(min=0, max=500, step=10, unit_of_measurement="W", mode="box")),
         vol.Optional("solar_ema_alpha", default=defaults.get("solar_ema_alpha", DEFAULT_ALPHA)): selector.NumberSelector(selector.NumberSelectorConfig(min=0.01, max=1.0, step=0.01, mode="box")),
         vol.Optional("boost_threshold", default=defaults.get("boost_threshold", DEFAULT_BOOST_THRESHOLD)): selector.NumberSelector(selector.NumberSelectorConfig(min=1, max=100, step=1, unit_of_measurement="%", mode="box")),
         vol.Optional("empty_threshold", default=defaults.get("empty_threshold", DEFAULT_EMPTY_THRESHOLD)): selector.NumberSelector(selector.NumberSelectorConfig(min=0, max=100, step=1, unit_of_measurement="%", mode="box")),
@@ -35,6 +37,7 @@ def get_full_schema(defaults: dict | None = None) -> vol.Schema:
 
 class InverterControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
+
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> InverterControllerOptionsFlowHandler:
