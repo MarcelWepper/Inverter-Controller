@@ -96,7 +96,7 @@ class InverterCoordinator(DataUpdateCoordinator):
             elif soc < 15:
                 max_physical_limit = 200
             elif soc < 20:
-                max_physical_limit = 300
+                max_physical_limit = 400
             else:
                 max_physical_limit = max_p
         else:
