@@ -1,10 +1,6 @@
-# Inverter Controller for Home Assistant
-
-A reactive, event-driven power balancing integration for Home Assistant. It dynamically adjusts your inverter's output limit based on real-time grid consumption, battery state of charge (SoC), and solar production.
-
 # 🔋 Inverter Controller for Home Assistant
 
-**A custom Home Assistant integration that allows you to control your inverter with configurable parameters.**
+**A custom Home Assistant integration that allows you to control your inverter dynamically with highly configurable, reactive parameters.**
 
 [![release](https://img.shields.io/github/v/release/MarcelWepper/Inverter-Controller?include_prereleases&style=flat-square)](https://github.com/MarcelWepper/Inverter-Controller/releases)
 [![HACS Integration](https://img.shields.io/badge/HACS-Integration-blue.svg?style=flat-square)](https://github.com/hacs/integration)
@@ -14,50 +10,35 @@ A reactive, event-driven power balancing integration for Home Assistant. It dyna
 
 ## 🚀 Key Features
 
-* **Reactive Power Balancing**: Unlike timer-based scripts, this integration listens for state changes and adjusts power limits instantly as your house load shifts.
-* **Configurable Deadband**: Fine-tune your import and export thresholds (e.g., 10W import, 20W export) to tightly hug your home's actual consumption without getting stuck.
-* **Exponential Moving Average (EMA)**: Built-in smoothing for solar production data to prevent "flapping" during cloudy days.
-* **Empty Battery Standby**: Automatically parks the inverter at your safe minimum limit (e.g., 100W) when the sun is down and the battery drops below your configured threshold (e.g., 10%). This guarantees a smooth start the next morning.
-* **Configurable High SoC Boost**: Intelligent hysteresis logic that safely ramps up inverter output when the battery hits your customizable threshold (e.g., >95%) to prevent energy waste when the battery is full.
-* **Advanced Statistics**: Provides calculated insights including **Estimated House Load**, **Solar Yield Ratio**, and a **Logic State** indicator.
-* **Master Switch**: Includes a dashboard toggle to instantly enable or disable the controller logic.
-
----
-
-## 🛠 Installation
-
-### via HACS (Recommended)
-1. Open **HACS** in your Home Assistant instance.
-2. Navigate to **Integrations**.
-3. Click the **three dots** in the top-right corner and select **Custom repositories**.
-4. Paste your repository URL and select **Integration** as the category.
-5. Click **Add**, then click **Download** on the Inverter Controller card.
-6. **Restart** Home Assistant.
-
-### Manual Installation
-1. Download the `inverter_controller` folder from this repository.
-2. Copy the folder into your `custom_components/` directory.
-3. **Restart** Home Assistant.
+* **Reactive Power Balancing**: Listens for state changes and adjusts power limits instantly as your house load shifts.
+* **Configurable Deadband**: Fine-tune your import and export thresholds to tightly hug your home's actual consumption without oscillating.
+* **Advanced Battery Protection**: Prevents "limit windup" spikes in the morning by safely clamping the inverter limit to available solar power when the battery is empty.
+* **Stepped Start-up Limiter**: Optional stepped power caps during morning wake-up (100W under 10%, 200W under 15%, 300W under 20% SoC).
+* **High SoC Solar Passthrough**: When the battery is full, the inverter limit tracks incoming solar production perfectly to export excess energy while covering the house load.
+* **Advanced Statistics**: Provides calculated insights including Estimated House Load, Solar Yield Ratio, and an active Logic State indicator.
 
 ---
 
 ## ⚙️ Configuration
 
-Once installed, go to **Settings > Devices & Services > Add Integration** and search for **Inverter Controller**. 
+Go to **Settings > Devices & Services > Add Integration** and search for **Inverter Controller**. After the initial setup, you can change these at any time by clicking **Configure** on the integration.
 
-### Step 1: Mandatory Entities
-You must provide these four entities to start the logic:
-* **Grid Power Sensor**: Measures net house power (Positive = Import, Negative = Export).
+### Mandatory Entities
+* **Grid Power Sensor**: Measures net house power (Positive = Import from grid, Negative = Export to grid).
 * **Battery SoC Sensor**: Measures battery percentage (0-100%).
-* **Solar Production Sensor**: Measures raw PV power.
-* **Inverter Limit Control**: The `number` or `input_number` entity that sets the inverter's maximum output.
+* **Solar Production Sensor**: Measures raw PV power (Watts).
+* **Inverter Limit Control**: The `number` or `input_number` entity that sets the inverter's maximum output limit.
 
-### Step 2: Adjustable Parameters
-After selecting entities, you can fine-tune the behavior dynamically via the Integration Options menu:
-* **Min/Max Power**: The absolute bounds for the inverter (e.g., 100W - 800W).
-* **Step Size**: How many Watts to adjust by in each cycle (e.g., 50W).
-* **Import Threshold**: Grid import target before the controller steps up the power (e.g., 10W).
-* **Export Threshold**: Grid export target before the controller steps down the power (e.g., 20W).
-* **EMA Alpha**: The smoothing factor for solar averaging. `0.1` is very smooth/slow, `0.9` is very reactive/jumpy.
-* **Boost Threshold**: Battery percentage to trigger the Hard Boost export mode (e.g., 95%).
-* **Empty Threshold**: Battery percentage to trigger nighttime standby mode (e.g., 10%).
+### Detailed Configuration Parameters
+* **Minimum Power (W)**: The absolute lowest limit the controller will ever set your inverter to (e.g., `100`). Used as the standby floor.
+* **Maximum Power (W)**: The absolute highest limit the controller can set (e.g., `800`).
+* **Adjustment Step Size**: How many Watts the limit increases/decreases per evaluation cycle (e.g., `50`).
+* **Import Threshold (W)**: The deadband for grid import. The controller will only start stepping the limit *up* if your grid import exceeds this number (e.g., `10`).
+* **Export Threshold (W)**: The deadband for grid export. The controller will only start stepping the limit *down* if your grid export exceeds this number (e.g., `20`).
+* **Solar Passthrough Margin (W)**: During high SoC Boost mode, this amount is subtracted from your raw solar generation to create a safe export buffer (e.g., `50`).
+* **Solar Smoothing Alpha (0-1)**: Exponential Moving Average factor. `0.1` is very slow/smooth, `0.9` reacts instantly to passing clouds.
+* **Battery Boost Threshold (%)**: When SoC hits this target, the controller enters "Solar Passthrough" mode, exporting excess energy safely (e.g., `95`).
+* **Empty Battery Standby Threshold (%)**: The point where the battery is considered "dead". The controller will park the inverter at `min_power` if the sun is down, and activate battery protection limiters when the sun comes up (e.g., `10`).
+* **Enable Stepped Start-up Limiter**: A toggle switch for morning behavior:
+  * **ON (Stepped)**: Forces strict power limits based on SoC: `100W` under 10%, `200W` under 15%, `300W` under 20%.
+  * **OFF (Proportional)**: Smoothly interpolates the allowable battery contribution from 0W at the `Empty Threshold` up to full power at `Empty Threshold + 5%`.

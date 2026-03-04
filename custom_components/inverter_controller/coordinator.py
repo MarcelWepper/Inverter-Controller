@@ -13,7 +13,8 @@ from .const import (
     DEFAULT_EMPTY_THRESHOLD,
     DEFAULT_IMPORT_THRESHOLD,
     DEFAULT_EXPORT_THRESHOLD,
-    DEFAULT_SOLAR_MARGIN
+    DEFAULT_SOLAR_MARGIN,
+    DEFAULT_STARTUP_LIMITER
 )
 
 class InverterCoordinator(DataUpdateCoordinator):
@@ -75,6 +76,8 @@ class InverterCoordinator(DataUpdateCoordinator):
         import_threshold = self.get_cfg("import_threshold", DEFAULT_IMPORT_THRESHOLD)
         export_threshold = self.get_cfg("export_threshold", DEFAULT_EXPORT_THRESHOLD)
         solar_margin = self.get_cfg("solar_margin", DEFAULT_SOLAR_MARGIN)
+        max_p = self.get_cfg("max_power", DEFAULT_MAX_POWER)
+        startup_limiter = self.get_cfg("startup_limiter", DEFAULT_STARTUP_LIMITER)
         
         # 1. Base Logic: What does the house need right now?
         if grid_p > import_threshold: 
@@ -82,21 +85,56 @@ class InverterCoordinator(DataUpdateCoordinator):
         elif grid_p < -export_threshold: 
             desired, state_desc = current - step, "Exporting (Decrease)"
 
-        # 2. Overrides (Standby & Boost Mode)
-        if solar_raw < 10 and soc < empty_threshold:
-            desired = self.get_cfg("min_power", DEFAULT_MIN_POWER)
-            state_desc = "Standby (Empty Battery)"
-        elif self.hard_boost:
+        # 2. Battery Protection Limits
+        resume_threshold = empty_threshold + 5
+        allowed_batt_power = 0
+        
+        if startup_limiter:
+            # NEW: Stepped Start-up Limiter
+            if soc < 10:
+                max_physical_limit = 100
+            elif soc < 15:
+                max_physical_limit = 200
+            elif soc < 20:
+                max_physical_limit = 300
+            else:
+                max_physical_limit = max_p
+        else:
+            # OLD: Stateless Proportional Battery Protection
+            if soc <= empty_threshold:
+                allowed_batt_power = 0
+            elif soc >= resume_threshold:
+                allowed_batt_power = max_p
+            else:
+                progress = (soc - empty_threshold) / (resume_threshold - empty_threshold)
+                allowed_batt_power = max_p * progress
+            
+            max_physical_limit = solar_raw + allowed_batt_power
+
+        # 3. Apply Overrides
+        if self.hard_boost:
             passthrough = max(0, solar_raw - solar_margin)
-            # Elegantly take the maximum of what the house needs OR the passthrough
             if passthrough > desired:
                 desired = passthrough
                 state_desc = f"Boosting (Passthrough: {int(passthrough)}W)"
             else:
                 state_desc = "Boosting (Covering Load)"
+                
+        elif desired > max_physical_limit:
+            desired = max_physical_limit
+            
+            if startup_limiter and soc < 20:
+                state_desc = f"Start-up Limiter (Capped at {int(max_physical_limit)}W)"
+            elif not startup_limiter and allowed_batt_power == 0:
+                if solar_raw < 10:
+                    state_desc = "Standby (Empty Battery)"
+                else:
+                    state_desc = f"Solar Only (Capped at {int(solar_raw)}W)"
+            elif not startup_limiter:
+                state_desc = f"Battery Protection (Capped at {int(max_physical_limit)}W)"
 
-        # 3. Final Constraints (Ensures it stays between min_power and max_power)
-        target = max(self.get_cfg("min_power", DEFAULT_MIN_POWER), min(self.get_cfg("max_power", DEFAULT_MAX_POWER), desired))
+        # 4. Final Constraints
+        target = max(self.get_cfg("min_power", DEFAULT_MIN_POWER), min(max_p, desired))
 
         if self.enabled and target != current:
             await self.hass.services.async_call(limit_id.split(".")[0], "set_value", {"entity_id": limit_id, "value": target})

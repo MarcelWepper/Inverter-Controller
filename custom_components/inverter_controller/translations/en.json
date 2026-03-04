@@ -16,7 +16,8 @@
           "solar_margin": "Solar Passthrough Margin (W)",
           "solar_ema_alpha": "Solar Smoothing Alpha (0-1)",
           "boost_threshold": "Battery Boost Threshold (%)",
-          "empty_threshold": "Empty Battery Standby Threshold (%)"
+          "empty_threshold": "Empty Battery Standby Threshold (%)",
+          "startup_limiter": "Enable Stepped Start-up Limiter"
         }
       }
     }
@@ -38,7 +39,8 @@
           "solar_margin": "Solar Passthrough Margin (W)",
           "solar_ema_alpha": "Solar Smoothing Alpha (0-1)",
           "boost_threshold": "Battery Boost Threshold (%)",
-          "empty_threshold": "Empty Battery Standby Threshold (%)"
+          "empty_threshold": "Empty Battery Standby Threshold (%)",
+          "startup_limiter": "Enable Stepped Start-up Limiter"
         }
       }
     }

@@ -14,10 +14,12 @@ from .const import (
     DEFAULT_EMPTY_THRESHOLD,
     DEFAULT_IMPORT_THRESHOLD,
     DEFAULT_EXPORT_THRESHOLD,
-    DEFAULT_SOLAR_MARGIN
+    DEFAULT_SOLAR_MARGIN,
+    DEFAULT_STARTUP_LIMITER
 )
 
 def get_full_schema(defaults: dict | None = None) -> vol.Schema:
+    """Centralized schema used for initial setup and reconfiguration."""
     if defaults is None: defaults = {}
     return vol.Schema({
         vol.Required("grid_sensor", default=defaults.get("grid_sensor")): selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor")),
@@ -33,9 +35,11 @@ def get_full_schema(defaults: dict | None = None) -> vol.Schema:
         vol.Optional("solar_ema_alpha", default=defaults.get("solar_ema_alpha", DEFAULT_ALPHA)): selector.NumberSelector(selector.NumberSelectorConfig(min=0.01, max=1.0, step=0.01, mode="box")),
         vol.Optional("boost_threshold", default=defaults.get("boost_threshold", DEFAULT_BOOST_THRESHOLD)): selector.NumberSelector(selector.NumberSelectorConfig(min=1, max=100, step=1, unit_of_measurement="%", mode="box")),
         vol.Optional("empty_threshold", default=defaults.get("empty_threshold", DEFAULT_EMPTY_THRESHOLD)): selector.NumberSelector(selector.NumberSelectorConfig(min=0, max=100, step=1, unit_of_measurement="%", mode="box")),
+        vol.Optional("startup_limiter", default=defaults.get("startup_limiter", DEFAULT_STARTUP_LIMITER)): selector.BooleanSelector(),
     })
 
 class InverterControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Inverter Controller."""
     VERSION = 1
 
     @staticmethod
@@ -49,6 +53,7 @@ class InverterControllerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="user", data_schema=get_full_schema())
 
 class InverterControllerOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle editing variables."""
     async def async_step_init(self, user_input=None):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
