@@ -1,4 +1,4 @@
-# 🔋 Inverter Controller for Home Assistant
+# 🔋 Solar Inverter Controller for Home Assistant
 
 **A custom Home Assistant integration that allows you to control your inverter dynamically with highly configurable, reactive parameters.**
 
